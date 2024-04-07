@@ -1,73 +1,111 @@
 const express = require('express');
-let books = require("./booksdb.js");
-let isValid = require("./auth_users.js").isValid;
-let users = require("./auth_users.js").users;
+const axios = require('axios');
 const public_users = express.Router();
 
+// Función para obtener la lista de libros disponibles en la tienda utilizando async-await con Axios
+async function getBookList() {
+  try {
+    const response = await axios.get('https://davidtorresi-5000.theianext-0-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/');
+    return response.data.books;
+  } catch (error) {
+    throw error;
+  }
+}
 
-public_users.post("/register", (req,res) => {
-  //Write your code here
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ message: "Both username and password are required." });
+// Función para obtener los detalles del libro basados en el ISBN utilizando async-await con Axios
+async function getBookDetailsByISBN(isbn) {
+  try {
+    const response = await axios.get(`https://davidtorresi-5000.theianext-0-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/isbn/${isbn}`);
+    return response.data.book;
+  } catch (error) {
+    throw error;
   }
-  if (username.hasOwnProperty(username)) {
-    return res.status(400).json({ message: "Username already exists." });
+}
+
+// Función para obtener los detalles del libro basados en el Autor utilizando async-await con Axios
+async function getBookDetailsByAuthor(author) {
+  try {
+    const response = await axios.get(`https://davidtorresi-5000.theianext-0-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/author/${author}`);
+    return response.data.books;
+  } catch (error) {
+    throw error;
   }
-  username[username] = password;
-  return res.status(200).json({ message: "User registered successfully." });
+}
+
+// Función para obtener los detalles del libro basados en el Título utilizando async-await con Axios
+async function getBookDetailsByTitle(title) {
+  try {
+    const response = await axios.get(`https://davidtorresi-5000.theianext-0-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/title/${title}`);
+    return response.data.books;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Ruta para registrar un nuevo usuario
+public_users.post("/register", (req, res) => {
+  // Implementa la lógica de registro de usuario aquí
 });
 
-// Get the book list available in the shop
-public_users.get('/',function (req, res) {
-  //Write your code here
-  const bookList = Object.values(books);
-  return res.status(200).json({ books: bookList });
+// Ruta para obtener la lista de libros disponibles en la tienda utilizando async-await con Axios
+public_users.get('/', async (req, res) => {
+  try {
+    const bookList = await getBookList();
+    return res.status(200).json({ books: bookList });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error." });
+  }
 });
 
-// Get book details based on ISBN
-public_users.get('/isbn/:isbn',function (req, res) {
-  //Write your code here
+// Ruta para obtener los detalles del libro basados en el ISBN utilizando async-await con Axios
+public_users.get('/isbn/:isbn', async (req, res) => {
   const { isbn } = req.params;
-  if (books.hasOwnProperty(isbn)) {
-    return res.status(200).json({ book: books[isbn] });
-  } else {
-    return res.status(404).json({ message: "Book not found." });
+  try {
+    const bookDetails = await getBookDetailsByISBN(isbn);
+    return res.status(200).json({ book: bookDetails });
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return res.status(404).json({ message: "Book not found." });
+    } else {
+      return res.status(500).json({ message: "Internal server error." });
+    }
   }
 });
-  
-// Get book details based on author
-public_users.get('/author/:author',function (req, res) {
-  //Write your code here
+
+// Ruta para obtener los detalles del libro basados en el Autor utilizando async-await con Axios
+public_users.get('/author/:author', async (req, res) => {
   const { author } = req.params;
-  const booksByAuthor = Object.values(books).filter(book => book.author === author);
-  if (booksByAuthor.length > 0) {
-    return res.status(200).json({ books: booksByAuthor });
-  } else {
-    return res.status(404).json({ message: "Books by this author not found." });
+  try {
+    const bookDetails = await getBookDetailsByAuthor(author);
+    return res.status(200).json({ books: bookDetails });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error." });
   }
 });
 
-// Get all books based on title
-public_users.get('/title/:title',function (req, res) {
-  //Write your code here
+// Ruta para obtener los detalles del libro basados en el Título utilizando async-await con Axios
+public_users.get('/title/:title', async (req, res) => {
   const { title } = req.params;
-  const booksByTitle = Object.values(books).filter(book => book.title.includes(title));
-  if (booksByTitle.length > 0) {
-    return res.status(200).json({ books: booksByTitle });
-  } else {
-    return res.status(404).json({ message: "Books with this title not found." });
+  try {
+    const bookDetails = await getBookDetailsByTitle(title);
+    return res.status(200).json({ books: bookDetails });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error." });
   }
 });
 
-// Get book review
-public_users.get('/review/:isbn',function (req, res) {
-  //Write your code here
+// Ruta para obtener las reseñas de un libro
+public_users.get('/review/:isbn', async (req, res) => {
   const { isbn } = req.params;
-  if (books.hasOwnProperty(isbn) && Object.keys(books[isbn].reviews).length > 0) {
-    return res.status(200).json({ reviews: books[isbn].reviews });
-  } else {
-    return res.status(404).json({ message: "No reviews found for this book." });
+  try {
+    const response = await axios.get(`https://davidtorresi-5000.theianext-0-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/review/${isbn}`);
+    return res.status(200).json({ reviews: response.data.reviews });
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return res.status(404).json({ message: "No reviews found for this book." });
+    } else {
+      return res.status(500).json({ message: "Internal server error." });
+    }
   }
 });
 
